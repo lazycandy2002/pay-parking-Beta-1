@@ -30,6 +30,7 @@ const router = createRouter({
           name: 'home',
           component: HomeView,
         },
+        
         {
           path: '/new-registration',
           name: 'new-registration',
