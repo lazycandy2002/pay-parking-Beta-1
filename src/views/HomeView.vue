@@ -3,22 +3,22 @@
     <Card title="Parking Overview" class="dashboard-metrics">
       <Row :gutter="16">
         <Col span="8">
-        <Card class="stat-card stat-sales" dis-hover>
-          <h3>Total Revenue</h3>
-          <p class="stat-value">₱ {{ monthlyTotalRevenue.toLocaleString() }}</p>
-        </Card>
+          <Card class="stat-card stat-sales" dis-hover>
+            <h3>Total Revenue</h3>
+            <p class="stat-value">₱ {{ monthlyTotalRevenue.toLocaleString() }}</p>
+          </Card>
         </Col>
         <Col span="8">
-        <Card class="stat-card stat-quantity" dis-hover>
-          <h3>Active Vehicles</h3>
-          <p class="stat-value">{{ activeVehicles }}</p>
-        </Card>
+          <Card class="stat-card stat-quantity" dis-hover>
+            <h3>Active Vehicles</h3>
+            <p class="stat-value">{{ activeVehicles }}</p>
+          </Card>
         </Col>
         <Col span="8">
-        <Card class="stat-card stat-count" dis-hover>
-          <h3>Total Transactions</h3>
-          <p class="stat-value">{{ monthlyTransactionCount }}</p>
-        </Card>
+          <Card class="stat-card stat-count" dis-hover>
+            <h3>Total Transactions</h3>
+            <p class="stat-value">{{ monthlyTransactionCount }}</p>
+          </Card>
         </Col>
       </Row>
     </Card>
@@ -60,22 +60,18 @@
       </Col>
     </Row>
 
-    <Card title="Recent Parking Transactions" class="dashboard-latest">
-      <Table :columns="transactionColumns" :data="latestTransactions" border />
-    </Card>
   </div>
 </template>
 
 <script>
 import { supabase } from '@/lib/supabase'
 import moment from 'moment'
-// Using view-design's Chart component instead of importing echarts
 
 export default {
   name: 'ParkingDashboard',
   data() {
     return {
-      latestTransactions: [],
+      allTransactions: [],
       parkingSlots: [],
       monthlyTotalRevenue: 0,
       activeVehicles: 0,
@@ -83,68 +79,131 @@ export default {
       occupancyRate: 0,
       occupiedCount: 0,
       availableCount: 0,
+      statusFilter: '',
+      tableLoading: false,
       transactionColumns: [
-        { title: 'Plate Number', key: 'numberplate_number' },
-        { title: 'Slot', key: 'slotLabel' },
         { 
-          title: 'Time In', 
-          render: (h, { row }) => h('span', moment(row.time_in).format('MMM DD, YYYY HH:mm'))
+          title: 'Record Code', 
+          key: 'record_id',
+          width: 100,
+          fixed: 'left',
+          render: (h, { row }) => h('span', { class: 'record-code' }, `#${row.record_id}`)
         },
         { 
-          title: 'Time Out', 
+          title: 'Plate Number', 
+          key: 'numberplate_number',
+          ellipsis: true
+        },
+        { 
+          title: 'Slot', 
+          key: 'slotLabel',
+          width: 70
+        },
+        {
+          title: 'Time In',
+          render: (h, { row }) => h('span', moment(row.time_in).format('MMM DD, HH:mm'))
+        },
+        {
+          title: 'Time Out',
           render: (h, { row }) => {
             if (row.time_out) {
-              return h('span', moment(row.time_out).format('MMM DD, YYYY HH:mm'))
+              return h('span', moment(row.time_out).format('MMM DD, HH:mm'))
             }
-            return h('span', 'Still Parked')
+            return h('span', { class: 'still-parked' }, 'Still Parked')
           }
         },
-        { 
-          title: 'Duration', 
+        {
+          title: 'Duration',
+          width: 80,
           render: (h, { row }) => {
             if (row.duration_minutes) {
               const hours = Math.floor(row.duration_minutes / 60)
               const minutes = row.duration_minutes % 60
               return h('span', `${hours}h ${minutes}m`)
             }
-            return h('span', 'In Progress')
+            return h('span', { class: 'in-progress' }, 'In Progress')
           }
         },
-        { 
-          title: 'Fee', 
+        {
+          title: 'Fee',
+          width: 90,
           render: (h, { row }) => {
             if (row.total_fee) {
-              return h('span', `₱ ${Number(row.total_fee).toLocaleString()}`)
+              return h('span', { class: 'fee-amount' }, `₱${Number(row.total_fee).toLocaleString()}`)
             }
-            return h('span', 'Pending')
+            return h('span', { class: 'fee-pending' }, 'Pending')
+          }
+        },
+        {
+          title: 'Status',
+          width: 80,
+          render: (h, { row }) => {
+            const statusClass = row.status === 'active' ? 'status-active' : 'status-completed'
+            return h('span', { class: statusClass }, row.status.toUpperCase())
           }
         },
         { 
-          title: 'Status', 
-          render: (h, { row }) => {
-            const statusClass = row.status === 'active' ? 'status-active' : 'status-completed'
-            return h('span', { class: statusClass }, row.status)
-          }
+          title: 'Processed By', 
+          key: 'processed_by',
+          ellipsis: true
+        },
+        { 
+          title: 'Vehicle ID', 
+          key: 'vehicle_id',
+          width: 90,
+          ellipsis: true
         },
       ],
     }
   },
-  methods: {
-    async fetchLatestTransactions() {
-      const { data, error } = await supabase
-        .from('parking_records')
-        .select(`*, slots(slot_label)`)
-        .order('time_in', { ascending: false })
-        .limit(5)
-
-      if (!error && data) {
-        this.latestTransactions = data.map(record => ({
-          ...record,
-          slotLabel: record.slots?.slot_label || `Slot ${record.slot_id}`,
-        }))
-      } else {
-        console.error('Error fetching transactions:', error)
+  computed: {
+    filteredTransactions() {
+      if (!this.statusFilter) {
+        return this.allTransactions
       }
+      return this.allTransactions.filter(transaction => 
+        transaction.status === this.statusFilter
+      )
+    }
+  },
+  methods: {
+    async fetchAllTransactions() {
+      this.tableLoading = true
+      try {
+        // First, try to fetch with slots join
+        const { data, error } = await supabase
+          .from('parking_records')
+          .select(`*, slots(slot_label)`)
+          .order('record_id', { ascending: false })
+
+        if (!error && data) {
+          this.allTransactions = data.map(record => ({
+            ...record,
+            slotLabel: record.slots?.slot_label || `Slot ${record.slot_id}`,
+          }))
+        } else {
+          // If join fails, fetch without join
+          console.warn('Fetch with slots join failed, trying without join:', error)
+          const { data: simpleData, error: simpleError } = await supabase
+            .from('parking_records')
+            .select('*')
+            .order('record_id', { ascending: false })
+
+          if (!simpleError && simpleData) {
+            this.allTransactions = simpleData.map(record => ({
+              ...record,
+              slotLabel: `Slot ${record.slot_id}`,
+            }))
+          } else {
+            console.error('Error fetching transactions:', simpleError)
+            this.$Message.error('Failed to fetch parking transactions')
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err)
+        this.$Message.error('An unexpected error occurred while fetching data')
+      }
+      this.tableLoading = false
     },
     async fetchParkingSlots() {
       const { data, error } = await supabase
@@ -160,66 +219,133 @@ export default {
       }
     },
     async fetchMonthlyStats() {
-      const startOfMonth = moment().startOf('month').format('YYYY-MM-DD')
-      const endOfMonth = moment().endOf('month').format('YYYY-MM-DD')
+      try {
+        const startOfMonth = moment().startOf('month').format('YYYY-MM-DD')
+        const endOfMonth = moment().endOf('month').format('YYYY-MM-DD')
 
-      // Get completed transactions for the month
-      const { data: completedData, error: completedError } = await supabase
-        .from('parking_records')
-        .select('total_fee')
-        .gte('time_in', startOfMonth)
-        .lte('time_in', endOfMonth)
-        .not('total_fee', 'is', null)
+        console.log('Fetching stats for date range:', startOfMonth, 'to', endOfMonth)
 
-      if (!completedError && completedData) {
-        this.monthlyTotalRevenue = completedData.reduce((acc, curr) => acc + Number(curr.total_fee), 0)
-        this.monthlyTransactionCount = completedData.length
-      }
+        // First, let's try to get ALL revenue data to see what we have
+        const { data: allRevenueData, error: allRevenueError } = await supabase
+          .from('parking_records')
+          .select('total_fee, time_in, status')
+          .not('total_fee', 'is', null)
 
-      // Get active vehicles (status = 'active')
-      const { data: activeData, error: activeError } = await supabase
-        .from('parking_records')
-        .select('record_id')
-        .eq('status', 'active')
+        console.log('All revenue data:', allRevenueData)
 
-      if (!activeError && activeData) {
-        this.activeVehicles = activeData.length
+        if (!allRevenueError && allRevenueData) {
+          // Calculate total revenue for current month
+          const monthlyRevenue = allRevenueData.filter(record => {
+            const recordDate = moment(record.time_in)
+            return recordDate.isBetween(startOfMonth, endOfMonth, 'day', '[]')
+          })
+          
+          console.log('Monthly revenue records:', monthlyRevenue)
+          this.monthlyTotalRevenue = monthlyRevenue.reduce((acc, curr) => acc + (parseFloat(curr.total_fee) || 0), 0)
+          this.monthlyTransactionCount = monthlyRevenue.length
+        } else {
+          console.error('Error fetching revenue data:', allRevenueError)
+          
+          // Fallback: try without date filtering to see if there's any data at all
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('parking_records')
+            .select('total_fee')
+            .not('total_fee', 'is', null)
+            .limit(5)
+
+          console.log('Fallback data check:', fallbackData)
+          
+          if (!fallbackError && fallbackData && fallbackData.length > 0) {
+            // If we have revenue data but date filtering failed, show total revenue
+            this.monthlyTotalRevenue = fallbackData.reduce((acc, curr) => acc + (parseFloat(curr.total_fee) || 0), 0)
+            this.monthlyTransactionCount = fallbackData.length
+            console.log('Using fallback data - Total revenue:', this.monthlyTotalRevenue)
+          }
+        }
+
+        // Active vehicles (currently parked)
+        const { data: activeData, error: activeError } = await supabase
+          .from('parking_records')
+          .select('record_id')
+          .eq('status', 'active')
+
+        if (!activeError && activeData) {
+          this.activeVehicles = activeData.length
+          console.log('Active vehicles:', this.activeVehicles)
+        } else {
+          console.error('Error fetching active vehicles:', activeError)
+        }
+
+      } catch (err) {
+        console.error('Unexpected error in fetchMonthlyStats:', err)
       }
     },
     updateOccupancyStats() {
-      // Count occupied and available slots
       this.occupiedCount = this.parkingSlots.filter(slot => slot.status === 'occupied').length
-      this.availableCount = this.parkingSlots.filter(slot => slot.status === 'available').length
-      
+      this.availableCount = this.parkingSlots.filter(slot => slot.status === 'vacant').length
       const totalSlots = this.occupiedCount + this.availableCount
       this.occupancyRate = totalSlots > 0 ? (this.occupiedCount / totalSlots) * 100 : 0
     },
+    refreshTransactions() {
+      this.fetchAllTransactions()
+      this.$Message.success('Transactions refreshed successfully')
+    },
+    async testData() {
+      console.log('=== TESTING DATA ===')
+      
+      // Test basic connection
+      const { data: testConnection, error: connectionError } = await supabase
+        .from('parking_records')
+        .select('*')
+        .limit(1)
+
+      console.log('Connection test:', { data: testConnection, error: connectionError })
+
+      // Count total records
+      const { count, error: countError } = await supabase
+        .from('parking_records')
+        .select('*', { count: 'exact', head: true })
+
+      console.log('Total records count:', { count, error: countError })
+
+      // Check for records with fees
+      const { data: feeData, error: feeError } = await supabase
+        .from('parking_records')
+        .select('total_fee, time_in, status')
+        .not('total_fee', 'is', null)
+        .limit(5)
+
+      console.log('Records with fees:', { data: feeData, error: feeError })
+
+      // Check for active records
+      const { data: activeData, error: activeError } = await supabase
+        .from('parking_records')
+        .select('*')
+        .eq('status', 'active')
+        .limit(3)
+
+      console.log('Active records:', { data: activeData, error: activeError })
+
+      this.$Message.info('Check browser console for test results')
+    }
   },
   mounted() {
-    this.fetchLatestTransactions()
+    // Add some debugging
+    console.log('Dashboard mounted, fetching data...')
+    this.fetchAllTransactions()
     this.fetchParkingSlots()
     this.fetchMonthlyStats()
-    
-    // Set up auto-refresh every minute
+
     this.refreshInterval = setInterval(() => {
-      this.fetchLatestTransactions()
+      this.fetchAllTransactions()
       this.fetchParkingSlots()
       this.fetchMonthlyStats()
     }, 60000)
-    
-    // Handle window resize for chart
-    window.addEventListener('resize', () => {
-      if (this.slotChart) {
-        this.slotChart.resize()
-      }
-    })
   },
   beforeDestroy() {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval)
     }
-    
-    window.removeEventListener('resize', this.handleResize)
   }
 }
 </script>
@@ -332,11 +458,57 @@ export default {
   background-color: #52c41a;
 }
 
+.dashboard-latest {
+  margin-top: 16px;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-container .ivu-table {
+  width: 100% !important;
+  min-width: 100%;
+}
+
+.table-container .ivu-table-wrapper {
+  width: 100% !important;
+}
+
+.table-container .ivu-table tbody td {
+  white-space: nowrap;
+}
+
+.table-controls {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+}
+
+/* Enhanced table styling */
+.record-code {
+  font-weight: bold;
+  color: #1890ff;
+  background-color: #f0f9ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
 .status-active {
   color: #fa8c16;
   background-color: #fff7e6;
   padding: 2px 8px;
   border-radius: 4px;
+  font-weight: bold;
+  font-size: 11px;
 }
 
 .status-completed {
@@ -344,9 +516,36 @@ export default {
   background-color: #f6ffed;
   padding: 2px 8px;
   border-radius: 4px;
+  font-weight: bold;
+  font-size: 11px;
 }
 
-.dashboard-latest {
+.still-parked {
+  color: #fa8c16;
+  font-style: italic;
+}
+
+.in-progress {
+  color: #fa8c16;
+  font-style: italic;
+}
+
+.fee-amount {
+  color: #52c41a;
+  font-weight: bold;
+}
+
+.data-info {
+  font-size: 12px;
+  color: #666;
+}
+
+.debug-info {
   margin-top: 16px;
+  padding: 16px;
+  background-color: #fff7e6;
+  border: 1px solid #ffec99;
+  border-radius: 4px;
+  color: #d48806;
 }
 </style>

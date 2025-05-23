@@ -1,11 +1,10 @@
 <template>
   <div class="p-4 bg-gray-100 min-h-screen">
-    <!-- Registration Form -->
     <div class="mb-6 bg-white rounded-lg shadow-md p-6">
       <h2 class="text-2xl font-bold mb-4 text-blue-800">New Vehicle Registration</h2>
       <Form ref="formRef" :model="form" :rules="rules" :label-width="120">
         <FormItem label="Car ID" prop="carId">
-          <Input v-model="form.carId" placeholder="Enter Car ID" />
+          <Input v-model="form.carId" placeholder="Auto Generated" readonly />
         </FormItem>
         <FormItem label="Car Category" prop="carCategory">
           <Select v-model="form.carCategory" placeholder="Select Car Category">
@@ -28,20 +27,23 @@
       </Form>
     </div>
 
-    <!-- Registration List -->
     <div class="bg-white rounded-lg shadow-md p-6">
       <h2 class="text-xl font-bold mb-4 text-blue-800">Registered Vehicles</h2>
-      <Table :columns="columns" :data="vehicles" border>
-        <template #action="{ row }">
-          <Button size="small" type="info" @click="editRegistration(row)">Edit</Button>
-          <Button size="small" type="error" @click="deleteRegistration(row.id)"
-            style="margin-left: 8px;">Delete</Button>
-          <Button size="small" type="success" @click="viewQRCode(row)" style="margin-left: 8px;">View QR</Button>
-        </template>
-      </Table>
+      <div class="mb-4">
+        <Input v-model="searchQuery" placeholder="Search by Car ID, Category, Color, or Plate Number" clearable style="width: 300px;" />
+      </div>
+      <div style="max-height: 400px; overflow-y: auto;">
+        <Table :columns="columns" :data="filteredVehicles" border>
+          <template #action="{ row }">
+            <Button size="small" type="info" @click="editRegistration(row)">Edit</Button>
+            <Button size="small" type="error" @click="deleteRegistration(row.id)"
+              style="margin-left: 8px;">Delete</Button>
+            <Button size="small" type="success" @click="viewQRCode(row)" style="margin-left: 8px;">View QR</Button>
+          </template>
+        </Table>
+      </div>
     </div>
 
-    <!-- QR Code Modal -->
     <Modal v-model="showQRModal" title="Registration QR Code" width="400">
       <div class="text-center">
         <div class="flex justify-center mb-4">
@@ -66,44 +68,39 @@
       </div>
     </Modal>
 
-<!-- Enhanced Hidden Print Section -->
-<div id="printSection" style="display: none; font-family: 'Arial', sans-serif;">
-  <div style="max-width: 700px; margin: auto; padding: 40px; border: 1px solid #ccc; background: #fff;">
-    <!-- Header -->
-    <div style="text-align: center; border-bottom: 2px solid #0047ab; padding-bottom: 10px; margin-bottom: 20px;">
-      <img :src="logoSrc" alt="P&PAY Logo" style="width: 120px; margin-bottom: 10px;">
-      <h1 style="font-size: 26px; color: #0047ab; margin: 0;">PAY PARKING REGISTRATION</h1>
-      <p style="font-size: 14px; color: #666;">Automated Parking Authorization Slip</p>
-    </div>
+    <div id="printSection" style="display: none; font-family: 'Arial', sans-serif;">
+      <div style="max-width: 700px; margin: auto; padding: 40px; border: 1px solid #ccc; background: #fff;">
+        <div style="text-align: center; border-bottom: 2px solid #0047ab; padding-bottom: 10px; margin-bottom: 20px;">
+          <img :src="logoSrc" alt="P&PAY Logo" style="width: 120px; margin-bottom: 10px;">
+          <h1 style="font-size: 26px; color: #0047ab; margin: 0;">PAY PARKING REGISTRATION</h1>
+          <p style="font-size: 14px; color: #666;">Automated Parking Authorization Slip</p>
+        </div>
 
-    <!-- Vehicle Details Section -->
-    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-      <div style="width: 48%;">
-        <p><strong>Car ID:</strong> 🚘 {{ selectedVehicle.carId }}</p>
-        <p><strong>Category:</strong> 📂 {{ selectedVehicle.carCategory }}</p>
-        <p><strong>Color:</strong> 🎨 {{ selectedVehicle.color }}</p>
-      </div>
-      <div style="width: 48%;">
-        <p><strong>Plate Number:</strong> 🔢 {{ selectedVehicle.plateNumber }}</p>
-        <p><strong>Date & Time:</strong> 🕒 {{ new Date().toLocaleString() }}</p>
-        <p><strong>Status:</strong> ✅ Verified</p>
-      </div>
-    </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div style="width: 48%;">
+            <p><strong>Car ID:</strong> 🚘 {{ selectedVehicle.carId }}</p>
+            <p><strong>Category:</strong> 📂 {{ selectedVehicle.carCategory }}</p>
+            <p><strong>Color:</strong> 🎨 {{ selectedVehicle.color }}</p>
+          </div>
+          <div style="width: 48%;">
+            <p><strong>Plate Number:</strong> 🔢 {{ selectedVehicle.plateNumber }}</p>
+            <p><strong>Date & Time:</strong> 🕒 {{ new Date().toLocaleString() }}</p>
+            <p><strong>Status:</strong> ✅ Verified</p>
+          </div>
+        </div>
 
-    <!-- QR Code -->
-    <div style="text-align: center; margin: 30px 0;">
-      <div style="display: inline-block; border: 2px dashed #0047ab; padding: 15px;">
-        <img :src="qrCodeSrc" alt="QR Code" style="width: 200px;">
-      </div>
-      <p style="font-size: 14px; color: #555;">Scan this QR Code to verify registration</p>
-    </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="display: inline-block; border: 2px dashed #0047ab; padding: 15px;">
+            <img :src="qrCodeSrc" alt="QR Code" style="width: 200px;">
+          </div>
+          <p style="font-size: 14px; color: #555;">Scan this QR Code to verify registration</p>
+        </div>
 
-    <!-- Footer -->
-    <div style="text-align: center; border-top: 1px solid #ccc; padding-top: 15px;">
-      <p style="font-size: 12px; color: #999;">Printed by PAY PARKING SYSTEM | Powered by J&W</p>
+        <div style="text-align: center; border-top: 1px solid #ccc; padding-top: 15px;">
+          <p style="font-size: 12px; color: #999;">Printed by PAY PARKING SYSTEM | Powered by J&W</p>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   </div>
 </template>
 
@@ -129,7 +126,29 @@ export default {
         plateNumber: [{ required: true, message: 'Plate number is required', trigger: 'blur' }]
       },
       vehicles: [],
-      carCategories: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Compact'],
+      searchQuery: '', // New data property for the search query
+      carCategories: [
+        'Sedan',
+        'Coupe',
+        'Sportscars',
+        'Station wagon',
+        'Hatchback',
+        'Convertible',
+        'Sport-utility vehicle (SUV)',
+        'Minivan',
+        'Pickup truck',
+        'Jeep',
+        'Electric car',
+        'CUV/Crossover',
+        'Spyder',
+        'Hot hatch',
+        'Limousine',
+        'UTE',
+        'Pony car',
+        'Sports sedan',
+        'Military vehicle',
+        'Dragster'
+      ],
       showQRModal: false,
       selectedVehicle: {},
       qrCodeSrc: '',
@@ -148,6 +167,23 @@ export default {
       ]
     }
   },
+  computed: {
+    // Computed property to filter vehicles based on searchQuery
+    filteredVehicles() {
+      if (!this.searchQuery) {
+        return this.vehicles
+      }
+      const query = this.searchQuery.toLowerCase()
+      return this.vehicles.filter(vehicle => {
+        return (
+          vehicle.carId.toLowerCase().includes(query) ||
+          vehicle.carCategory.toLowerCase().includes(query) ||
+          vehicle.color.toLowerCase().includes(query) ||
+          vehicle.plateNumber.toLowerCase().includes(query)
+        )
+      })
+    }
+  },
   methods: {
     async fetchVehicles() {
       const { data, error } = await supabase.from('vehicles').select('*')
@@ -158,15 +194,53 @@ export default {
         console.error('Error fetching vehicles:', error)
       }
     },
+    async generateNextCarId() {
+      try {
+        // Get all vehicles and find the maximum carId
+        const { data, error } = await supabase.from('vehicles').select('carId')
+        
+        if (error) {
+          console.error('Error fetching car IDs:', error)
+          return '0001' // Default with zero padding
+        }
+        
+        if (!data || data.length === 0) {
+          return '0001' // First car ID with zero padding
+        }
+        
+        // Find the car ID with maximum numeric value and detect format
+        let maxNumericId = 0
+        let detectedFormat = '0001' // Default format
+        
+        data.forEach(vehicle => {
+          const carId = vehicle.carId
+          const numericId = parseInt(carId) || 0
+          
+          if (numericId > maxNumericId) {
+            maxNumericId = numericId
+            detectedFormat = carId // Store the format of the highest ID
+          }
+        })
+        
+        // Determine the padding length from the detected format
+        const paddingLength = detectedFormat.length
+        const nextId = maxNumericId + 1
+        
+        // Return next ID with same zero padding
+        return nextId.toString().padStart(paddingLength, '0')
+      } catch (error) {
+        console.error('Error generating next car ID:', error)
+        return '0001'
+      }
+    },
     async saveRegistration() {
       this.$refs.formRef.validate(async (valid) => {
         if (valid) {
           if (this.form.id) {
-            // Update existing vehicle
+            // Update existing vehicle (Car ID remains the same)
             const { error } = await supabase
               .from('vehicles')
               .update({
-                carId: this.form.carId,
                 carCategory: this.form.carCategory,
                 color: this.form.color,
                 plateNumber: this.form.plateNumber
@@ -182,7 +256,7 @@ export default {
               console.error('Error updating vehicle:', error)
             }
           } else {
-            // Create new vehicle
+            // Create new vehicle with auto-generated Car ID
             const { error } = await supabase
               .from('vehicles')
               .insert([{
@@ -229,13 +303,15 @@ export default {
         }
       })
     },
-    resetForm() {
+    async resetForm() {
       this.$refs.formRef.resetFields()
       this.form.id = null
-      this.form.carId = ''
       this.form.carCategory = ''
       this.form.color = ''
       this.form.plateNumber = ''
+      
+      // Generate new Car ID for new registration
+      this.form.carId = await this.generateNextCarId()
     },
     async viewQRCode(vehicle) {
       this.selectedVehicle = vehicle
@@ -301,8 +377,10 @@ export default {
       location.reload()
     }
   },
-  mounted() {
-    this.fetchVehicles()
+  async mounted() {
+    await this.fetchVehicles()
+    // Generate initial Car ID for new registration
+    this.form.carId = await this.generateNextCarId()
   }
 }
 </script>

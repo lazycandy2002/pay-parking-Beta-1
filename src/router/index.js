@@ -30,7 +30,7 @@ const router = createRouter({
           name: 'home',
           component: HomeView,
         },
-        
+
         {
           path: '/new-registration',
           name: 'new-registration',
@@ -50,6 +50,11 @@ const router = createRouter({
           path: '/parking-slots',
           name: 'parking-slots',
           component: () => import('../views/ParkingSlotsView.vue'),
+        },
+        {
+          path: '/parking-fee',
+          name: 'parking-fee',
+          component: () => import('../views/ParkingFeeView.vue'),
         },
         {
           path: '/settings',
