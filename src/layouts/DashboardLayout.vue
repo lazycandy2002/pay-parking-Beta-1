@@ -70,10 +70,6 @@
                     <Icon type="md-cash"></Icon>
                     <span>Parking Fee</span>
                     </MenuItem>
-                    <MenuItem @click.native="goTo('/settings')" name="/settings">
-                    <Icon type="ios-settings"></Icon>
-                    <span>Settings</span>
-                    </MenuItem>
                     <MenuItem @click.native="goTo('/about')" name="/help">
                     <Icon type="ios-information-circle"></Icon>
                     <span>About</span>

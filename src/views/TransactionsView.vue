@@ -7,15 +7,15 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">Search Vehicle by Car ID</label>
         <div class="flex gap-3">
           <Input v-model="searchCarId" placeholder="Enter Car ID" @on-enter="searchVehicle" @on-focus="selectAllInput"
-            style="width: 300px;" />
-          <Button type="primary" @click="searchVehicle">Search</Button>
-          <Button @click="clearSearch">Clear</Button>
+            style="width: 300px; border: 1px solid black;" />
+            <Button type="primary" @click="searchVehicle" style="margin-left: 10px; width: 100px;">Search</Button>
+            <Button @click="clearSearch" style="margin-left: 10px;" >Clear </Button>
         </div>
       </div>
 
       <div v-if="selectedVehicle" class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <h3 class="text-lg font-semibold text-green-800 mb-3">Vehicle Found ✓</h3>
-        <div class="grid grid-cols-2 gap-4">
+        <h3 class="text-lg font-semibold text-green-800 mb-3" style="padding: 10px;">Vehicle Found ✓</h3>
+        <div class="grid grid-cols-4 gap-1 mb-10">
           <div><strong>Car ID:</strong> {{ selectedVehicle.carId }}</div>
           <div><strong>Category:</strong> {{ selectedVehicle.carCategory }}</div>
           <div><strong>Color:</strong> {{ selectedVehicle.color }}</div>
@@ -31,10 +31,10 @@
     </div>
 
     <div v-if="selectedVehicle" class="mb-6 bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-xl font-bold mb-4 text-blue-800">Select Parking Slot</h2>
+      <h2 class="text-xl font-bold mb-4 text-blue-800" style="border-top: 1px solid black; border-bottom: 1px solid black; margin-bottom: 20px; padding-left:10px;">Select Parking Slot</h2>
 
       <div class="mb-4">
-        <Button type="success" @click="fetchVacantSlots">Refresh Available Slots</Button>
+        <Button type="success" @click="fetchVacantSlots" style="margin-bottom: 10px; margin-left: 10px;">Refresh Available Slots</Button>
       </div>
 
       <div v-if="vacantSlots.length > 0" class="grid grid-cols-4 gap-3">
@@ -56,7 +56,7 @@
       </div>
 
       <div v-if="selectedSlot" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 class="text-lg font-semibold text-blue-800 mb-2">Selected Slot</h3>
+        <h3 class="text-lg font-semibold text-blue-800 mb-2" style="border-top: 1px solid black;">Selected Slot</h3>
         <div class="grid grid-cols-2 gap-4">
           <div><strong>Slot Label:</strong> {{ selectedSlot.slot_label }}</div>
           <div><strong>Status:</strong> {{ selectedSlot.status }}</div>
@@ -65,7 +65,7 @@
     </div>
 
     <div v-if="selectedVehicle && selectedSlot" class="mb-6 bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-xl font-bold mb-4 text-blue-800">Transaction Summary</h2>
+      <h2 class="text-xl font-bold mb-4 text-blue-800" style="border-top: 1px solid black;">Transaction Summary</h2>
 
       <div class="grid grid-cols-2 gap-6 mb-6">
         <div>
@@ -86,21 +86,21 @@
       </div>
 
       <div class="flex gap-3">
-        <Button type="primary" size="large" :loading="isProcessing" @click="confirmTransaction">
+        <Button type="primary" size="large" :loading="isProcessing" @click="confirmTransaction" style="margin-left: 10px; margin-bottom: 10px;">
           {{ isProcessing ? 'Processing...' : 'Confirm Parking Entry' }}
         </Button>
-        <Button @click="resetTransaction" size="large">Reset</Button>
+        <Button @click="resetTransaction"  size="large" style="margin-left: 10px; margin-bottom: 10px;">Reset</Button>
       </div>
     </div>
 
     <div class="bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-xl font-bold mb-4 text-blue-800">Active Parking Sessions</h2>
+      <h2 class="text-xl font-bold mb-4 text-blue-800" style="border-top: 1px solid black; margin-bottom: 10px;">Active Parking Sessions</h2>
 
-      <div class="mb-4">
-        <Button type="success" @click="fetchActiveTransactions">Refresh</Button>
+      <div class="mb-4" style="margin-bottom: 10px;">
+        <Button type="success" @click="fetchActiveTransactions" style=" margin-left: 10px;">Refresh</Button>
       </div>
 
-      <Table :columns="transactionColumns" :data="activeTransactions" border>
+      <Table :columns="transactionColumns" :data="activeTransactions" border style="border-bottom: 1px solid black; padding-bottom: 10px;">
         <template #actions="{ row }">
           <Button size="small" type="warning" @click="processCheckout(row)">Check Out</Button>
           <Button size="small" type="info" @click="viewDetails(row)" style="margin-left: 8px;">Details</Button>
@@ -565,9 +565,7 @@ export default {
     },
 
     redirectToRegistration() {
-      this.$Message.info('Navigate to vehicle registration page');
-      // Example of actual navigation if using Vue Router:
-      // this.$router.push('/registration');
+      this.$router.push({ name: 'new-registration' });
     }
   },
 

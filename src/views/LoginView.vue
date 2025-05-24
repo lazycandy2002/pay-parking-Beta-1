@@ -43,9 +43,6 @@
           </Button>
         </FormItem>
         
-        <div class="forgot-password">
-          <a @click="forgotPassword">Forgot password?</a>
-        </div>
       </Form>
       
       <div v-if="errorMessage" class="error-message">
