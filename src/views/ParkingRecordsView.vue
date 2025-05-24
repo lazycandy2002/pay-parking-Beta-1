@@ -16,11 +16,12 @@ export default {
     return {
       parkingRecords: [],
       parkingColumns: [
-        { title: 'Record ID', key: 'record_id' },
+        { title: 'Record ID', key: 'record_id', width: 100 },
         { title: 'Slot ID', key: 'slot_id' },
         {
           title: 'Time In',
-          render: (h, { row }) => h('span', moment(row.time_in).format('MMM DD, YYYY HH:mm'))
+          render: (h, { row }) =>
+            h('span', moment(row.time_in).format('MMM DD, YYYY HH:mm'))
         },
         {
           title: 'Time Out',
@@ -84,11 +85,18 @@ export default {
 
 <style scoped>
 .transaction-wrapper {
-  max-width: 1800px;
+  max-width: 2000px;
   margin: auto;
-  padding: 20px;
+  padding: 10px;
 }
 
+/* Adjust table data cell font size */
+.transaction-list .ivu-table-cell {
+  font-size: 12px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Status tags */
 .status-active {
   color: #fa8c16;
   background-color: #fff7e6;

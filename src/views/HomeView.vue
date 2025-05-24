@@ -353,6 +353,8 @@ export default {
 <style scoped>
 .dashboard-wrapper {
   padding: 16px;
+  min-height: 100vh;
+  overflow-y: auto;
 }
 
 .stat-card {
@@ -388,7 +390,8 @@ export default {
 
 .dashboard-slots,
 .dashboard-chart {
-  height: 300px;
+  min-height: 300px;
+  height: auto;
 }
 
 .slot-grid {
@@ -396,6 +399,7 @@ export default {
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   padding: 10px;
+  min-height: 200px;
 }
 
 .parking-slot {
@@ -423,7 +427,8 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  min-height: 250px;
+  padding: 20px;
 }
 
 .progress-text {

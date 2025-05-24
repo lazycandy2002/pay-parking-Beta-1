@@ -126,7 +126,7 @@
 
         <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <h4 class="font-semibold text-green-800">Total Fee: ₱{{ calculateFee(checkoutTransaction) }}</h4>
-          <p class="text-sm text-gray-600 mt-1">Rate: ₱50/hour (Standard Rate)</p>
+          <p class="text-sm text-gray-600 mt-1">Rate: ₱{{ standardRate }}/hour (Standard Rate)</p>
         </div>
       </div>
 
@@ -135,6 +135,74 @@
         <Button @click="showCheckoutModal = false">Cancel</Button>
       </div>
     </Modal>
+
+    <div id="receiptPrintSection" style="display: none; font-family: 'Arial', sans-serif;">
+      <div style="max-width: 800px; margin: auto; padding: 40px; border: 1px solid #ccc; background: #fff;">
+        <div style="text-align: center; border-bottom: 2px solid #0047ab; padding-bottom: 15px; margin-bottom: 25px;">
+          <img :src="logoSrc" alt="P&PAY Logo" style="width: 120px; margin-bottom: 10px;">
+          <h1 style="font-size: 28px; color: #0047ab; margin: 0;">PARKING RECEIPT</h1>
+          <p style="font-size: 16px; color: #666;">Official Parking Transaction Record</p>
+          <p style="font-size: 14px; color: #999;">Generated on {{ new Date().toLocaleDateString() }}</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #0047ab; margin-bottom: 15px;">🚗 Vehicle & Parking Details</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="background-color: #f8f9fa; border-bottom: 2px solid #0047ab;">
+                <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Description</th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Record ID</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ printData.record_id }}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Car ID</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ printData.vehicle?.carId }}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Plate Number</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ printData.vehicle?.plateNumber }}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Parking Slot</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ printData.parking_slot?.slot_label }}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Time In</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ printData.time_in }}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Time Out</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ printData.time_out }}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Duration</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ calculateDuration(printData.time_in, printData.time_out) }} minutes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+          <div>
+            <p><strong>Total Fee:</strong> <span style="font-size: 20px; font-weight: bold; color: #2d8cf0;">₱{{ calculateFee(printData) }}</span></p>
+          </div>
+          <div style="text-align: right;">
+            <p><strong>Payment Status:</strong> ✅ Paid</p>
+            <p><strong>Issued At:</strong> {{ new Date().toLocaleString() }}</p>
+          </div>
+        </div>
+
+        <div style="text-align: center; border-top: 1px solid #ccc; padding-top: 15px;">
+          <p style="font-size: 12px; color: #999;">Thank you for parking with us! | Powered by J&W</p>
+          <p style="font-size: 10px; color: #ccc;">This receipt is computer generated and does not require a signature.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -154,6 +222,10 @@ export default {
       activeTransactions: [],
       showCheckoutModal: false,
       checkoutTransaction: null,
+      feeSettings: [], // Store fee settings from database
+      standardRate: 50, // Fallback rate if database fetch fails
+      logoSrc: './src/assets/J&W Logo.png', // Add logo source
+      printData: {}, // Data for the receipt printout
       transactionColumns: [
         { title: 'Record ID', key: 'record_id', width: 100 },
         {
@@ -205,6 +277,23 @@ export default {
     selectAllInput(event) {
       if (event.target) {
         event.target.select();
+      }
+    },
+
+    async fetchFeeSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('fee_settings')
+          .select('*')
+          .eq('fee_id', 1)
+          .single();
+
+        if (!error && data) {
+          this.standardRate = parseFloat(data.fee) || 50;
+        }
+      } catch (error) {
+        console.error('Error fetching fee settings:', error);
+        // Keep using fallback rate
       }
     },
 
@@ -318,7 +407,6 @@ export default {
       }
     },
 
-
     async fetchActiveTransactions() {
       try {
         const { data, error } = await supabase
@@ -368,48 +456,27 @@ export default {
     calculateFee(transaction) {
       const duration = this.calculateDuration(transaction.time_in, transaction.time_out);
       const hours = Math.ceil(duration / 60);
-      const rate = 50; // Standard rate
-      return hours * rate;
+
+      // Use the fetched standard rate
+      return hours * this.standardRate;
     },
 
-
     printReceipt(transaction) {
-      const receiptContent = `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2 style="text-align: center;">Parking Receipt</h2>
-          <p><strong>Record ID:</strong> ${transaction.record_id}</p>
-          <p><strong>Car ID:</strong> ${transaction.vehicle?.carId}</p>
-          <p><strong>Plate Number:</strong> ${transaction.vehicle?.plateNumber}</p>
-          <p><strong>Slot:</strong> ${transaction.parking_slot?.slot_label}</p>
-          <p><strong>Time In:</strong> ${transaction.time_in}</p>
-          <p><strong>Time Out:</strong> ${transaction.time_out || new Date().toLocaleString()}</p>
-          <p><strong>Duration:</strong> ${this.calculateDuration(transaction.time_in, transaction.time_out || new Date().toLocaleString())} minutes</p>
-          <p><strong>Total Fee:</strong> ₱${this.calculateFee(transaction)}</p>
-          <p style="text-align:center; margin-top: 20px;">Thank you for parking with us!</p>
-        </div>
-      `;
+      // Set the data for the print section
+      this.printData = { ...transaction };
+      this.printData.time_out = transaction.time_out || new Date().toLocaleString();
 
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Receipt</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-              h2 { text-align: center; }
-              p { margin: 5px 0; }
-            </style>
-          </head>
-          <body>
-            ${receiptContent}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      // Optionally close window after printing (user experience may vary)
-      // printWindow.close();
+      setTimeout(() => {
+        const printContent = document.getElementById('receiptPrintSection').innerHTML;
+        const originalContent = document.body.innerHTML;
+
+        document.body.innerHTML = printContent;
+        window.print();
+        document.body.innerHTML = originalContent;
+
+        // Reload the page to restore Vue component state and clear print styles
+        location.reload();
+      }, 100);
     },
 
     async confirmCheckout() {
@@ -447,7 +514,7 @@ export default {
         if (slotError) throw slotError;
 
         this.$Message.success(`Checkout completed! Total fee: ₱${totalFee}`);
-        
+
         // Print the receipt
         this.printReceipt({ ...this.checkoutTransaction, time_out: timeOut });
 
@@ -505,6 +572,7 @@ export default {
   },
 
   async mounted() {
+    await this.fetchFeeSettings(); // Fetch fee settings first
     await this.fetchActiveTransactions();
   }
 }
@@ -541,5 +609,24 @@ export default {
 
 .transition-all {
   transition: all 0.2s ease-in-out;
+}
+
+/* Print styles for the receipt */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #receiptPrintSection,
+  #receiptPrintSection * {
+    visibility: visible;
+  }
+
+  #receiptPrintSection {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }
 </style>
